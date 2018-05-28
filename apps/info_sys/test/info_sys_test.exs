@@ -16,22 +16,32 @@ defmodule InfoSysTest do
       send(owner, {:backend, self()})
       :timer.sleep(:infinity)
     end
+    def fetch("boom", _ref, _owner, _limit) do
+      raise "boom!"
+    end
   end
 
   test "compute/2 with backend results" do
-    assert [%Result{backend: "test", text: "result"}] =
+    assert [%Result{backend: "test", text: "result"}] ==
            InfoSys.compute("result", backends: [TestBackend])
   end
 
   test "compute/2 with no backend results" do
-    assert [] = InfoSys.compute("none", backends: [TestBackend])
+    assert [] == InfoSys.compute("none", backends: [TestBackend])
   end
 
   test "compute/2 with timeout returns no results and kills workers" do
-    assert [] = InfoSys.compute("timeout", backends: [TestBackend], timeout: 10)
+    assert [] == InfoSys.compute("timeout", backends: [TestBackend], timeout: 10)
     assert_receive {:backend, backend_pid}
     ref = Process.monitor(backend_pid)
     assert_receive {:DOWN, ^ref, :process, _pid, _reason}
+    refute_received {:DOWN, _, _, _, _}
+    refute_received :timeout
+  end
+
+  @tag :capture_log
+  test "compute/2 discards backend errors" do
+    assert [] == InfoSys.compute("boom", backends: [TestBackend])
     refute_received {:DOWN, _, _, _, _}
     refute_received :timeout
   end
