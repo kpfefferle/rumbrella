@@ -1,9 +1,5 @@
 defmodule InfoSys do
 
-  def hello do
-    :world
-  end
-
   @backends [InfoSys.Wolfram]
 
   defmodule Result do
